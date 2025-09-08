@@ -1,0 +1,18 @@
+version: "3.9"
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.api
+    container_name: visdetselector-api
+    ports:
+      - "8000:8000"
+
+  playwright:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.playwright
+    container_name: visdetselector-playwright
+    depends_on:
+      - api

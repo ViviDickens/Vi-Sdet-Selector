@@ -1,0 +1,14 @@
+# Playwright SDK - TypeScript
+FROM mcr.microsoft.com/playwright:v1.47.2-focal
+
+WORKDIR /sdk
+
+# Copy Playwright SDK code
+COPY playwright-sdk/ ./playwright-sdk
+
+# Install dependencies
+WORKDIR /sdk/playwright-sdk
+RUN npm install
+
+# Default command (runs predict.ts in demo mode)
+CMD ["npx", "ts-node", "predict.ts"]
