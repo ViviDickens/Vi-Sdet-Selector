@@ -1,0 +1,10 @@
+fastapi==0.111.0
+uvicorn[standard]==0.30.1
+pydantic==2.7.4
+
+# optional AI layer (server/predict/explain + tests/test_deepeval_reasoning.py)
+anthropic==0.34.2
+deepeval==1.1.9
+
+# testing
+pytest==8.2.2
