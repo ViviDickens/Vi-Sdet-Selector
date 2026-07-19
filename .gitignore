@@ -7,3 +7,6 @@ node_modules/
 *.joblib
 .pytest_cache/
 .deepeval-cache.json
+playwright-sdk/test-results/
+playwright-sdk/playwright-report/
+playwright-sdk/dist/

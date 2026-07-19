@@ -4,15 +4,21 @@ services:
   api:
     build:
       context: .
-      dockerfile: docker/Dockerfile.api
+      dockerfile: Dockerfile/Dockerfile.api
     container_name: visdetselector-api
     ports:
       - "8000:8000"
+    environment:
+      # Optional — only needed for POST /predict/explain. Leave unset and
+      # the API still works fine, that endpoint just returns a 503.
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY:-}
 
   playwright:
     build:
       context: .
-      dockerfile: docker/Dockerfile.playwright
+      dockerfile: Dockerfile/Dockerfile.playwright
     container_name: visdetselector-playwright
     depends_on:
       - api
+    environment:
+      - VI_SDET_SELECTOR_URL=http://api:8000

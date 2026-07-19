@@ -6,9 +6,12 @@ WORKDIR /sdk
 # Copy Playwright SDK code
 COPY playwright-sdk/ ./playwright-sdk
 
-# Install dependencies
+# Install dependencies (browsers already baked into this base image)
 WORKDIR /sdk/playwright-sdk
 RUN npm install
 
-# Default command (runs predict.ts in demo mode)
-CMD ["npx", "ts-node", "predict.ts"]
+# Runs the example suite (tests/saucedemo.spec.ts) against the API
+# container. Needs VI_SDET_SELECTOR_URL pointing at the api service
+# (set in docker-compose.yml) since "localhost" inside this container
+# is not the api container.
+CMD ["npx", "playwright", "test"]

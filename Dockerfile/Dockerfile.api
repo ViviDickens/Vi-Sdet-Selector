@@ -7,10 +7,9 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy server and model code
+# Copy server code (server/rules.py + server/reasoning.py — no external
+# model file or dataset needed, the rule engine is pure Python logic)
 COPY server/ ./server
-COPY model/ ./model
-COPY data/ ./data
 
 # Expose FastAPI on port 8000
 EXPOSE 8000
