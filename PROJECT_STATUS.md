@@ -98,28 +98,82 @@ que clonen el repo pueden terminar con árboles de dependencias distintos.
 `server/reasoning.py:41` fija `claude-3-5-haiku-20241022`, dos generaciones
 atrás. El equivalente actual es `claude-haiku-4-5-20251001`.
 
-### 6. Dependencias Python muy atrasadas
+### 6. `deepeval==1.1.9` está roto: no se puede ni importar
+
+Este es el hallazgo más serio después del 1. Verificado en un venv limpio:
+
+```
+$ pip install deepeval==1.1.9      # instala sin error
+$ python -c "import deepeval"
+  File ".../deepeval/models/gpt_model.py", line 7, in <module>
+    from langchain.schema import HumanMessage
+ModuleNotFoundError: No module named 'langchain.schema'
+```
+
+La causa: `deepeval` 1.1.9 declara `langchain`, `langchain-core` y
+`langchain-openai` **sin ninguna cota de versión**, así que pip resuelve a
+`langchain` 1.3.14, donde `langchain.schema` ya no existe. No es que el pin sea
+viejo: es que el pin ya no es instalable de forma utilizable.
+
+Hoy no se nota porque `pytestmark` salta el test sin API keys y los imports de
+deepeval están dentro de la función de test. En cuanto se configuren
+`ANTHROPIC_API_KEY` y `OPENAI_API_KEY`, el test no falla por métricas — muere
+con `ModuleNotFoundError` en su primera línea.
+
+Dos salidas, ambas comprobadas:
+
+- **Parche mínimo:** agregar `langchain==0.2.16`, `langchain-core<0.3` y
+  `langchain-openai<0.2` a `requirements.txt`. Con eso los imports funcionan.
+- **Subir a `deepeval` 4.1.4** — y acá la buena noticia: **el código del test no
+  hay que tocarlo**. Verifiqué contra 4.1.4 que siguen existiendo `assert_test`,
+  `LLMTestCase(input=, actual_output=, retrieval_context=)`,
+  `FaithfulnessMetric(threshold=)` y `AnswerRelevancyMetric(threshold=)`. La
+  API que usa el test sobrevivió los tres majors intactos.
+
+### 7. El `retrieval_context` no coincide con lo que ve el generador
+
+`tests/test_deepeval_reasoning.py:64` pasa solo `prediction.reasoning` como
+`retrieval_context`, pero `_build_prompt` le da al modelo **cinco** hechos:
+
+```
+retrieval_context (lo que juzga DeepEval):
+  ['element has stable test id', 'dynamic class detected', 'xpath likely brittle']
+
+contexto real del generador:
+  Recommended strategy: data-testid      ← no está en retrieval_context
+  Alternative strategy: aria-label       ← no está en retrieval_context
+  + los tres signals de arriba
+```
+
+La explicación necesariamente va a decir "usá data-testid" y "aria-label como
+alternativa", y ninguna de las dos afirmaciones está respaldada por el contexto
+declarado. Faithfulness termina midiendo contra un contexto más angosto que el
+real, lo que le mete ruido al score.
+
+Peor: como `"xpath likely brittle"` sí está en el contexto, si el modelo
+alucinara y recomendara XPath, la métrica no tendría con qué contradecirlo. El
+test no puede detectar precisamente la alucinación que más importa — que
+recomiende la estrategia equivocada.
+
+Arreglo: incluir la recomendación y la alternativa en `retrieval_context`, y
+agregar un assert plano de que la explicación menciona
+`prediction.recommended_strategy`.
+
+### 8. Otras dependencias atrasadas
 
 | Paquete | Fijado | Actual |
 |---|---|---|
 | `anthropic` | 0.34.2 | 0.120.0 |
-| `deepeval` | 1.1.9 | 4.1.4 |
 | `fastapi` | 0.111.0 | 0.140.2 |
 
-`deepeval` es el más delicado: tres majors de diferencia, así que la API que
-usa `tests/test_deepeval_reasoning.py` (`assert_test`, `LLMTestCase`,
-`FaithfulnessMetric`) casi seguro cambió. Ese test hoy se salta por falta de
-keys, así que la incompatibilidad no se está manifestando — pero aparecerá en
-cuanto se configuren.
-
-### 7. La imagen de la API arrastra la capa opcional
+### 9. La imagen de la API arrastra la capa opcional
 
 `Dockerfile/Dockerfile.api:8` instala todo `requirements.txt`, lo que mete
 `deepeval` y `pytest` en la imagen que sirve `/predict`. La capa de IA es
 opcional por diseño; separar `requirements-dev.txt` (o extras) achicaría
 bastante la imagen.
 
-### 8. Detalles menores
+### 10. Detalles menores
 
 - `docker-compose.yml:1` — la clave `version: "3.9"` está obsoleta; Compose v2
   emite un warning al leerla.
@@ -153,7 +207,11 @@ Sin cubrir:
    Cierra el punto 1 del roadmap y da red de seguridad para todo lo demás.
 2. **Arreglar el regex del hallazgo 1** — es el único bug que cambia una
    recomendación, y ya hay tests donde encajarlo.
-3. **`@types/node` + script `typecheck`** — vuelve real el `strict: true`.
-4. **Commitear el lockfile** y pasar el Dockerfile a `npm ci`.
-5. **Actualizar modelo y dependencias**, empezando por `deepeval` (validar que
-   el test siga compilando contra la API 4.x).
+3. **Destrabar DeepEval (hallazgo 6)** — subir a `deepeval` 4.1.4. El código del
+   test no se toca; ya verifiqué que su API sigue igual. Sin esto, la parte
+   "AI Quality" del proyecto no corre aunque se configuren las keys.
+4. **Alinear el `retrieval_context` (hallazgo 7)** — sin esto el test corre pero
+   no mide lo que debería.
+5. **`@types/node` + script `typecheck`** — vuelve real el `strict: true`.
+6. **Commitear el lockfile** y pasar el Dockerfile a `npm ci`.
+7. **Actualizar el modelo de Claude y el resto de las dependencias.**
