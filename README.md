@@ -41,11 +41,13 @@ vi-sdet-selector/
 │  ├─ reasoning.py   # optional Claude explanation layer
 │  └─ app.py         # /predict + /predict/explain
 ├─ playwright-sdk/   # TypeScript SDK + example Playwright test
-├─ tests/            # pytest (rule engine) + DeepEval (explanations)
+├─ tests/            # pytest (rule engine, API) + DeepEval (explanations)
 ├─ model/, data/     # placeholders — no ML model currently in use
+├─ .github/workflows/ # CI: pytest + SDK typecheck
 ├─ Dockerfile/
 ├─ docker-compose.yml
-├─ requirements.txt
+├─ requirements.txt      # runtime
+├─ requirements-dev.txt  # + pytest, httpx, deepeval
 └─ conftest.py
 ```
 
@@ -60,7 +62,7 @@ git clone https://github.com/ViviDickens/Vi-Sdet-Selector.git
 cd vi-sdet-selector
 python -m venv venv
 source venv/Scripts/activate   # Windows Git Bash; use venv/bin/activate on macOS/Linux
-pip install -r requirements.txt
+pip install -r requirements-dev.txt   # or requirements.txt to run the API only
 ```
 
 ### 2. Run the API
@@ -80,8 +82,12 @@ curl -X POST http://127.0.0.1:8000/predict \
 ### 3. Run the tests
 
 ```bash
-python -m pytest tests/test_rules.py -v   # deterministic, no API key needed
+python -m pytest tests/ -v   # deterministic, no API key needed
 ```
+
+`tests/test_rules.py` (rule engine) and `tests/test_api.py` (endpoints)
+run everywhere. Both run in CI on every push, along with a typecheck of
+the TypeScript SDK.
 
 `tests/test_deepeval_reasoning.py` also needs `ANTHROPIC_API_KEY` (to
 generate the explanation) and `OPENAI_API_KEY` (DeepEval's default
@@ -117,7 +123,7 @@ docker compose up --build
 
 ## Roadmap
 
-- [ ] GitHub Actions CI (unit tests on every push)
+- [x] GitHub Actions CI (unit tests on every push)
 - [ ] Allure reporting for the Playwright suite
 - [ ] Revisit a learned component if the rule engine's coverage stops
       scaling

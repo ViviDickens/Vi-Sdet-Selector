@@ -3,7 +3,8 @@ FROM python:3.11-slim
 
 WORKDIR /app
 
-# Install dependencies
+# Runtime dependencies only — requirements-dev.txt (pytest, deepeval and
+# its langchain tree) is deliberately not installed here.
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 

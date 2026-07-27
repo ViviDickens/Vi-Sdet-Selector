@@ -55,13 +55,29 @@ def test_explanation_is_faithful_and_relevant():
         alternative=prediction.alternative,
     )
 
+    # The explanation must actually name the strategy it's defending.
+    # Faithfulness can't catch this on its own: "xpath likely brittle" is a
+    # legitimate signal, so an explanation that wrongly recommended XPath
+    # wouldn't contradict the context.
+    assert prediction.recommended_strategy in explanation.lower()
+
+    # retrieval_context has to mirror everything the generator was given,
+    # not just the signals — _build_prompt also hands it the recommended
+    # strategy and the alternative. Leaving those out makes the explanation
+    # look like it's asserting unsupported facts when it isn't.
+    retrieval_context = [
+        *prediction.reasoning,
+        f"recommended strategy: {prediction.recommended_strategy}",
+        f"alternative strategy: {prediction.alternative or 'none'}",
+    ]
+
     test_case = LLMTestCase(
         input=(
             f"Why is '{prediction.recommended_strategy}' the recommended "
             "locator strategy for this element?"
         ),
         actual_output=explanation,
-        retrieval_context=prediction.reasoning,
+        retrieval_context=retrieval_context,
     )
 
     faithfulness = FaithfulnessMetric(threshold=0.7)

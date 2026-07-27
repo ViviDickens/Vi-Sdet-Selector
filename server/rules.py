@@ -21,7 +21,12 @@ _DYNAMIC_CLASS_PATTERNS = [
     re.compile(r"^sc-[a-zA-Z0-9]+$"),                     # styled-components
     re.compile(r"^jsx-\d+$"),                             # styled-jsx
     re.compile(r"^_[a-zA-Z0-9]+_[a-z0-9]{5,}$"),          # CSS modules (e.g. _button_1a2b3)
-    re.compile(r"^[a-zA-Z]+-[a-f0-9]{5,}$", re.IGNORECASE),  # generic hash suffix
+    # Generic hash suffix. The suffix must contain at least one digit —
+    # without that guard, any word built only from the letters a-f reads as
+    # a hash ("btn-added", "user-facade", "nav-decade" all matched before).
+    # An all-letter hex hash is rare, and the css-/sc-/jsx- patterns above
+    # already cover the common generators that emit them.
+    re.compile(r"^[a-zA-Z]+-(?=[a-f0-9]*\d)[a-f0-9]{5,}$", re.IGNORECASE),
 ]
 
 
@@ -114,9 +119,21 @@ def predict_strategy(el: ElementAttributes) -> PredictionResponse:
         confidence = 0.40
     else:
         confidence = 0.55
+
+    # Only offer css as the alternative when there's actually something
+    # stable to anchor it on — a static class. Otherwise css would resolve
+    # to a bare tag selector, which matches every element of that tag.
+    static_classes = [c for c in el.classes if not is_dynamic_class(c)]
+    if static_classes:
+        alternative = "css"
+    elif el.text:
+        alternative = "text"
+    else:
+        alternative = None
+
     return PredictionResponse(
         recommended_strategy="xpath",
         confidence=confidence,
         reasoning=reasoning,
-        alternative="css",
+        alternative=alternative,
     )

@@ -70,7 +70,11 @@ export async function getLocator(
     case "aria-label":
       return `[aria-label="${element.aria_label}"]`;
     case "css":
-      return element.id ? `#${element.id}` : element.tag;
+      if (element.id) return `#${element.id}`;
+      if (element.classes?.length) {
+        return `${element.tag}.${element.classes.join(".")}`;
+      }
+      return element.tag;
     case "xpath":
       return element.xpath ? `xpath=${element.xpath}` : element.tag;
     default:

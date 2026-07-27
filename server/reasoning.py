@@ -38,7 +38,7 @@ def generate_natural_reasoning(
     signals: List[str],
     recommended_strategy: str,
     alternative: Optional[str] = None,
-    model: str = "claude-3-5-haiku-20241022",
+    model: str = "claude-haiku-4-5-20251001",
 ) -> str:
     """
     Turns the deterministic rule signals into a natural-language explanation.

@@ -1,10 +1,11 @@
-fastapi==0.111.0
-uvicorn[standard]==0.30.1
-pydantic==2.7.4
+# Runtime dependencies — everything needed to serve the API.
+# Test and eval tooling lives in requirements-dev.txt so it stays out of
+# the production image (Dockerfile/Dockerfile.api).
 
-# optional AI layer (server/predict/explain + tests/test_deepeval_reasoning.py)
-anthropic==0.34.2
-deepeval==1.1.9
+fastapi==0.140.2
+uvicorn[standard]==0.51.0
+pydantic==2.13.4
 
-# testing
-pytest==8.2.2
+# Backs POST /predict/explain only. Imported lazily in server/reasoning.py,
+# so POST /predict works even if this is missing.
+anthropic==0.120.0

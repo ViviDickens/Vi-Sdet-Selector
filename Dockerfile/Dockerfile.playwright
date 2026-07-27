@@ -6,9 +6,10 @@ WORKDIR /sdk
 # Copy Playwright SDK code
 COPY playwright-sdk/ ./playwright-sdk
 
-# Install dependencies (browsers already baked into this base image)
+# Install dependencies (browsers already baked into this base image).
+# npm ci, not npm install — installs exactly what package-lock.json pins.
 WORKDIR /sdk/playwright-sdk
-RUN npm install
+RUN npm ci
 
 # Runs the example suite (tests/saucedemo.spec.ts) against the API
 # container. Needs VI_SDET_SELECTOR_URL pointing at the api service

@@ -4,6 +4,10 @@
 **Rama analizada:** `claude/project-status-report-auceh5` (sincronizada con `main`)
 **Último commit:** `1d58d3f` — *Fix docker paths, clean up ML leftovers, rewrite README* (2026-07-19)
 
+> **Actualización (2026-07-27):** los 10 hallazgos de abajo ya están
+> corregidos. Ver la sección [Resolución](#resolución) al final. El cuerpo del
+> reporte se deja como quedó en el diagnóstico original.
+
 ---
 
 ## Resumen
@@ -215,3 +219,39 @@ Sin cubrir:
 5. **`@types/node` + script `typecheck`** — vuelve real el `strict: true`.
 6. **Commitear el lockfile** y pasar el Dockerfile a `npm ci`.
 7. **Actualizar el modelo de Claude y el resto de las dependencias.**
+
+---
+
+## Resolución
+
+Todo lo de arriba quedó corregido y verificado corriendo, no solo cambiado.
+
+| # | Hallazgo | Qué se hizo |
+|---|---|---|
+| 1 | Falsos positivos en clases dinámicas | El sufijo del patrón genérico ahora exige al menos un dígito (`server/rules.py`). 8 tests nuevos, incluido un guard de regresión para `id="btn-added"` |
+| 2 | El SDK no compila | `@types/node` + `"types": ["node"]`, y script `npm run typecheck`. Pasa limpio |
+| 3 | Sin CI | `.github/workflows/ci.yml`: pytest + typecheck del SDK en cada push y PR |
+| 4 | Sin lockfile | `package-lock.json` commiteado; `Dockerfile.playwright` pasa a `npm ci` |
+| 5 | Modelo desactualizado | `claude-haiku-4-5-20251001` |
+| 6 | `deepeval` roto | Subido a 4.1.4. Verificado: la suite colecta y corre bajo 4.x sin tocar el código del test |
+| 7 | `retrieval_context` incompleto | Ahora incluye la estrategia recomendada y la alternativa, más un assert plano de que la explicación nombra la estrategia |
+| 8 | Deps atrasadas | `fastapi` 0.140.2, `uvicorn` 0.51.0, `pydantic` 2.13.4, `anthropic` 0.120.0, `pytest` 9.1.1 |
+| 9 | Imagen de API inflada | `requirements.txt` (runtime) separado de `requirements-dev.txt` (pytest, httpx, deepeval). La imagen ya no arrastra langchain |
+| 10 | Detalles menores | Sacada la clave `version` obsoleta de compose; `tsconfig` alineado con `"type": "module"`; el fallback a xpath ya no ofrece `css` cuando no hay dónde anclarlo; `getLocator` usa clases estáticas antes de caer al tag |
+
+**Cobertura:** de 6 tests a 28 (+1 skipped). Se sumó `tests/test_api.py`, que
+cubre el nivel HTTP que antes no se tocaba: las cuatro ramas de prioridad, el
+422 de validación y el 503 de `/predict/explain` sin key.
+
+```
+$ python -m pytest tests/ -q
+28 passed, 1 skipped in 0.49s
+
+$ npm run typecheck        # (playwright-sdk/)
+$ tsc --noEmit             # sin errores
+```
+
+**Lo que sigue sin verificarse acá:** el E2E de Playwright (el proxy del sandbox
+bloquea `saucedemo.com`) y las métricas de DeepEval en sí, que necesitan
+`ANTHROPIC_API_KEY` y `OPENAI_API_KEY`. Lo que sí se verificó del lado DeepEval
+es que la suite ahora importa, colecta y corre bajo 4.1.4 — que era el bloqueo.
