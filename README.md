@@ -57,7 +57,7 @@ vi-sdet-selector/
 
 ```bash
 git clone https://github.com/ViviDickens/Vi-Sdet-Selector.git
-cd vi-sdet-selector
+cd Vi-Sdet-Selector
 python -m venv venv
 source venv/Scripts/activate   # Windows Git Bash; use venv/bin/activate on macOS/Linux
 pip install -r requirements.txt
